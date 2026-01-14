@@ -1,9 +1,15 @@
+import os
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from flask import Flask, request
 import analyzer  # сенің AI талдау модулі
 
-TOKEN = "7999401141:AAFbyZwH6rdTuTveSDKnTBYIjdgPy-m_Ak4"
+# --- Telegram Token ---
+TOKEN = os.getenv("BOT_TOKEN")  # Render-та BOT_TOKEN деп Environment Variable жаса
 bot = telebot.TeleBot(TOKEN)
+
+# --- Flask сервері ---
+app = Flask(__name__)
 
 # --- Сәлемдесу мәтіні ---
 WELCOME_TEXT = """
@@ -46,10 +52,7 @@ def handle_text(message):
     if user_state.get(user_id) == "WAITING_FOR_TEXT":
         bot.send_message(message.chat.id, "Талдау жүргізілуде... ⏳")
         try:
-            # AI талдау
             result = analyzer.check_phishing_with_ai(message.text)
-            
-            # Қауіп деңгейін анықтау (тексттен іздеу)
             res_up = result.upper()
             if any(word in res_up for word in ["DANGER", "ҚАУІП", "PHISHING", "⚠️"]):
                 status_emoji = "🔴 ЖОҒАРЫ ҚАУІП"
@@ -59,13 +62,29 @@ def handle_text(message):
                 status_emoji = "🟢 Қауіпсіз"
             
             bot.send_message(message.chat.id, f"{status_emoji}\n\n{result}")
-            
         except Exception as e:
             bot.send_message(message.chat.id, f"Қате орын алды: {e}")
-        
         user_state[user_id] = None
     else:
         bot.send_message(message.chat.id, "🔹 Мәтінді тексеру үшін алдымен 'Мәтінді тексеру' батырмасын басыңыз.")
 
-# --- Ботты іске қосу ---
-bot.infinity_polling()
+# --- Webhook ---
+WEBHOOK_URL = os.getenv("RENDER_EXTERNAL_URL")  # Render URL
+bot.remove_webhook()
+bot.set_webhook(url=WEBHOOK_URL)
+
+@app.route('/', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '', 200
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+# --- Run Flask ---
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))  # Render PORT
+    app.run(host="0.0.0.0", port=port)
