@@ -6,6 +6,9 @@ import analyzer  # сенің AI талдау модулі
 
 # --- Telegram Token ---
 TOKEN = os.getenv("BOT_TOKEN")  # Render-та BOT_TOKEN деп Environment Variable жаса
+if not TOKEN:
+    raise ValueError("BOT_TOKEN environment variable анықталмаған!")
+
 bot = telebot.TeleBot(TOKEN)
 
 # --- Flask сервері ---
@@ -70,6 +73,9 @@ def handle_text(message):
 
 # --- Webhook ---
 WEBHOOK_URL = os.getenv("RENDER_EXTERNAL_URL")  # Render URL
+if not WEBHOOK_URL:
+    raise ValueError("RENDER_EXTERNAL_URL environment variable анықталмаған!")
+
 bot.remove_webhook()
 bot.set_webhook(url=WEBHOOK_URL)
 
