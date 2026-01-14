@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# OpenAI клиентін баптау
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
@@ -31,14 +32,19 @@ def check_phishing_with_ai(text: str) -> str:
 """
 
     try:
-        response = client.responses.create(
-            model="gpt-4.1-mini",
-            input=prompt,
+        # Chat completions қолдану керек
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", # Модель атауы түзетілді
+            messages=[
+                {"role": "system", "content": "Сен киберқауіпсіздік сарапшысысың."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.2,
-            max_output_tokens=350
+            max_tokens=500 # max_output_tokens емес, max_tokens
         )
 
-        return response.output_text.strip()
+        # Жауапты алу жолы түзетілді
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
         return f"ЖИ қатесі: {str(e)}"
